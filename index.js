@@ -36,7 +36,7 @@ inquirer
       .prompt([
         {
           type: "input",
-          message: "",
+          message: "What is the department Name?",
           name: "department",
         }
       ])
@@ -97,46 +97,61 @@ inquirer
       break;
 
     case 'Add an Employee':
-        connection.query(
-          "SELECT title as name, id as value from role;",
-          (err, roleList) => {
-            if(err) throw err;
-            inquirer
-              .prompt([
-                {
-                  type: "input",
-                  message: "Enter Employee First Name:",
-                  name: "firstName",
-                },
-                {
-                  type: "input",
-                  message: "Enter Employee Last Name:",
-                  name: "lastName",
-                },
-                {
-                  type: "list",
-                  message: "Enter Employee Role:",
-                  name: "role",
-                  choices: roleList,
-                },
-              ])
-              .then((res) => {
-                connection.query(
-                  "INSERT INTO employee SET ?;", 
+      connection.query(
+        "SELECT CONCAT(first_name,' ',last_name) AS name, id AS value FROM employee;",
+        (err, employeeList) => {
+          connection.query(
+            "SELECT title as name, id as value from role;",
+            (err, roleList) => {
+              if(err) throw err;
+              inquirer
+                .prompt([
                   {
-                    first_name: res.firstName,
-                    last_name: res.lastName,
-                    role_id: res.role,
+                    type: "input",
+                    message: "Enter Employee First Name:",
+                    name: "firstName",
                   },
-                  (err, res) => {
-                    if(err) throw err;
-                    console.table(res);
-                    return commandline();
-                  }
-                );
-              });
-          } 
-        )
+                  {
+                    type: "input",
+                    message: "Enter Employee Last Name:",
+                    name: "lastName",
+                  },
+                  {
+                    type: "list",
+                    message: "Enter Employee Role:",
+                    name: "role",
+                    choices: roleList,
+                  },
+                  {
+                    type: "list",
+                    message: "Who is this employees manager?",
+                    name: "manager",
+                    choices: employeeList.concat({
+                      name: "None",
+                      value: null,
+                    }),
+                  },
+                ])
+                .then((res) => {
+                  connection.query(
+                    "INSERT INTO employee SET ?;", 
+                    {
+                      first_name: res.firstName,
+                      last_name: res.lastName,
+                      role_id: res.role,
+                      manager_id: res.manager,
+                    },
+                    (err, res) => {
+                      if(err) throw err;
+                      console.table(res);
+                      return commandline();
+                    }
+                  );
+                });
+            } 
+          )
+        }
+      )
       break;
 
     case 'View All Department':
@@ -152,7 +167,7 @@ inquirer
 
     case 'View All Roles':
       connection.query(
-        "SELECT role.title , role.salary , name  FROM role LEFT JOIN department ON department_id = department.id;",
+        "SELECT role.title AS title , role.salary AS Salary , name AS Department FROM role LEFT JOIN department ON department_id = department.id;",
         (err, res) => {
           if(err) throw err;
           console.table(res);
@@ -200,6 +215,7 @@ inquirer
                       "UPDATE employee SET ? WHERE ?;",
                       [{ role_id: res.role }, { id: res.employee }],
                     );
+                    return commandline();
                   });
               }
             );
